@@ -147,21 +147,5 @@ dependencies:
    - Thiết lập thời gian chữa cháy tự động (tính bằng mili giây).
    - Lưu ý: Tăng ngưỡng khí gas sẽ giảm độ nhạy; cảm biến lửa thì ngược lại.
 
-5. **Đăng xuất**:
-   - Nhấn nút đăng xuất trong `AppBar` của `HomePage` để quay lại `LoginPage`.
-
-## Ảnh chụp màn hình
-*(Thêm ảnh chụp màn hình tại đây nếu có, ví dụ: màn hình Đăng nhập, Tổng quan, Điều khiển, và Cài đặt.)*
-
-## Đóng góp
-Chúng tôi hoan nghênh mọi đóng góp! Để đóng góp:
-1. Fork kho mã nguồn.
-2. Tạo một nhánh tính năng (`git checkout -b feature/your-feature`).
-3. Ghi nhận thay đổi (`git commit -m 'Thêm tính năng của bạn'`).
-4. Đẩy lên nhánh (`git push origin feature/your-feature`).
-5. Mở một Pull Request.
-
-Vui lòng đảm bảo mã tuân theo các thực tiễn tốt nhất của Flutter và bao gồm xử lý lỗi phù hợp.
-
 ## Giấy phép
 Dự án này được cấp phép theo Giấy phép MIT. Xem tệp [LICENSE](LICENSE) để biết chi tiết.
