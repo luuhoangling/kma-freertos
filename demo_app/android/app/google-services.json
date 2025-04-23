@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "700617602773",
+    "firebase_url": "https://hdhntgt-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "hdhntgt",
+    "storage_bucket": "hdhntgt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700617602773:android:8f80aef171c65a7eaa145c",
+        "android_client_info": {
+          "package_name": "com.example.demo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFhBI-u4eue-X3yOJ07rCR00Tqt5hOqFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:700617602773:android:ce2ebb52ed4bb183aa145c",
+        "android_client_info": {
+          "package_name": "com.hdhntgt.data"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFhBI-u4eue-X3yOJ07rCR00Tqt5hOqFM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
