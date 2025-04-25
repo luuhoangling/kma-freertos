@@ -216,18 +216,23 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isConnected = true;
+  bool _isConnected =
+      true; // Giữ lại biến boolean này để tương thích với ConnectionStatusIndicator hiện có
   DateTime? _lastUpdateTime;
   StreamSubscription? _connectionSubscription;
+  Timer? _connectionCheckTimer;
+  String _connectionStatus =
+      "checking"; // Thêm biến này để theo dõi trạng thái chi tiết
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: 3,
-      vsync: this,
-    ); // Thay đổi length thành 3
+    _tabController = TabController(length: 3, vsync: this);
     _checkConnectionStatus();
+    // Khởi tạo timer để kiểm tra trạng thái kết nối mỗi giây
+    _connectionCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateConnectionStatus();
+    });
   }
 
   void _checkConnectionStatus() {
@@ -240,16 +245,23 @@ class _HomePageState extends State<HomePage>
             try {
               if (event.snapshot.exists) {
                 setState(() {
-                  _isConnected = true;
                   _lastUpdateTime = DateTime.now();
+                  _updateConnectionStatus();
                 });
               } else {
                 setState(() {
                   _isConnected = false;
+                  _connectionStatus = "offline";
                 });
               }
             } catch (e) {
               print('Error in connection listener: $e');
+              if (mounted) {
+                setState(() {
+                  _isConnected = false;
+                  _connectionStatus = "offline";
+                });
+              }
             }
           },
           onError: (e) {
@@ -257,15 +269,43 @@ class _HomePageState extends State<HomePage>
             if (mounted) {
               setState(() {
                 _isConnected = false;
+                _connectionStatus = "offline";
               });
             }
           },
         );
   }
 
+  void _updateConnectionStatus() {
+    if (_lastUpdateTime == null) {
+      setState(() {
+        _connectionStatus = "checking";
+        _isConnected = false;
+      });
+      return;
+    }
+
+    final now = DateTime.now();
+    final difference = now.difference(_lastUpdateTime!);
+
+    setState(() {
+      if (difference.inSeconds <= 10) {
+        _connectionStatus = "online";
+        _isConnected = true;
+      } else if (difference.inSeconds <= 60) {
+        _connectionStatus = "checking";
+        _isConnected = false;
+      } else {
+        _connectionStatus = "offline";
+        _isConnected = false;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _connectionSubscription?.cancel();
+    _connectionCheckTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -283,7 +323,11 @@ class _HomePageState extends State<HomePage>
       appBar: AppBar(
         title: const Text('Home'),
         actions: [
-          ConnectionStatusIndicator(isConnected: _isConnected),
+          // Sử dụng ConnectionStatusIndicator hiện có, nhưng thêm thông báo chi tiết
+          Tooltip(
+            message: _connectionStatus,
+            child: ConnectionStatusIndicator(isConnected: _isConnected),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _signOut,
@@ -298,20 +342,13 @@ class _HomePageState extends State<HomePage>
           tabs: const [
             Tab(text: 'Tổng quan', icon: Icon(Icons.dashboard)),
             Tab(text: 'Điều khiển', icon: Icon(Icons.touch_app)),
-            Tab(
-              text: 'Cài đặt',
-              icon: Icon(Icons.settings),
-            ), // Thêm tab Cài đặt
+            Tab(text: 'Cài đặt', icon: Icon(Icons.settings)),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          DashboardPage(),
-          ControlPage(),
-          SettingsPage(), // Thêm SettingPage
-        ],
+        children: const [DashboardPage(), ControlPage(), SettingsPage()],
       ),
     );
   }
@@ -361,6 +398,8 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _gasAlert = false;
   bool _flameAlert = false;
   int _systemState = 0;
+  int _gasThreshold = 500; // Giá trị mặc định
+  int _flameThreshold = 500; // Giá trị mặc định
 
   final List<FlSpot> _gasSpots = [];
   final List<FlSpot> _flameSpots = [];
@@ -370,6 +409,8 @@ class _DashboardPageState extends State<DashboardPage> {
   StreamSubscription? _gasAlertSubscription;
   StreamSubscription? _flameAlertSubscription;
   StreamSubscription? _systemStateSubscription;
+  StreamSubscription? _gasThresholdSubscription;
+  StreamSubscription? _flameThresholdSubscription;
 
   final _stateColors = const {0: Colors.green, 1: Colors.orange, 2: Colors.red};
   final _stateNames = const {
@@ -394,6 +435,8 @@ class _DashboardPageState extends State<DashboardPage> {
             if (event.snapshot.exists && mounted) {
               setState(() {
                 _gasValue = (event.snapshot.value as int?) ?? 0;
+                _gasAlert =
+                    _gasValue > _gasThreshold; // Cập nhật trạng thái cảnh báo
               });
             }
           } catch (e) {
@@ -409,6 +452,9 @@ class _DashboardPageState extends State<DashboardPage> {
             if (event.snapshot.exists && mounted) {
               setState(() {
                 _flameValue = (event.snapshot.value as int?) ?? 0;
+                _flameAlert =
+                    _flameValue <
+                    _flameThreshold; // Cập nhật trạng thái cảnh báo
               });
             }
           } catch (e) {
@@ -460,6 +506,41 @@ class _DashboardPageState extends State<DashboardPage> {
             print('Error in system_state listener: $e');
           }
         }, onError: (e) => print('System state listener error: $e'));
+
+    _gasThresholdSubscription = FirebaseDatabase.instance
+        .ref('/system/config/thresholds/gas')
+        .onValue
+        .listen((event) {
+          try {
+            if (event.snapshot.exists && mounted) {
+              setState(() {
+                _gasThreshold = (event.snapshot.value as int?) ?? 500;
+                _gasAlert =
+                    _gasValue > _gasThreshold; // Cập nhật trạng thái cảnh báo
+              });
+            }
+          } catch (e) {
+            print('Error in gas_threshold listener: $e');
+          }
+        }, onError: (e) => print('Gas threshold listener error: $e'));
+
+    _flameThresholdSubscription = FirebaseDatabase.instance
+        .ref('/system/config/thresholds/flame')
+        .onValue
+        .listen((event) {
+          try {
+            if (event.snapshot.exists && mounted) {
+              setState(() {
+                _flameThreshold = (event.snapshot.value as int?) ?? 500;
+                _flameAlert =
+                    _flameValue <
+                    _flameThreshold; // Cập nhật trạng thái cảnh báo
+              });
+            }
+          } catch (e) {
+            print('Error in flame_threshold listener: $e');
+          }
+        }, onError: (e) => print('Flame threshold listener error: $e'));
   }
 
   void _startChartUpdates() {
@@ -501,6 +582,8 @@ class _DashboardPageState extends State<DashboardPage> {
     _gasAlertSubscription?.cancel();
     _flameAlertSubscription?.cancel();
     _systemStateSubscription?.cancel();
+    _gasThresholdSubscription?.cancel();
+    _flameThresholdSubscription?.cancel();
     super.dispose();
   }
 
@@ -1418,7 +1501,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        hintText: 'Giá trị từ 0-1023',
+                        hintText: 'Giá trị từ 0 - 2000',
                       ),
                       keyboardType: TextInputType.number,
                     ),
@@ -1439,7 +1522,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        hintText: 'Giá trị từ 0-1023',
+                        hintText: 'Giá trị từ 0-5000',
                       ),
                       keyboardType: TextInputType.number,
                     ),
